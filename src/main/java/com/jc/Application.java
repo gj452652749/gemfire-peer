@@ -18,7 +18,11 @@ package com.jc;
 
 import static org.springframework.data.gemfire.util.CollectionUtils.asSet;
 
-import java.util.Scanner;
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.client.ClientRegionShortcut;
+import org.gj.demo.domain.Customer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -28,10 +32,9 @@ import org.springframework.data.gemfire.listener.ContinuousQueryDefinition;
 import org.springframework.data.gemfire.listener.ContinuousQueryListener;
 import org.springframework.data.gemfire.listener.ContinuousQueryListenerContainer;
 
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.client.ClientRegionShortcut;
-import org.gj.demo.domain.Customer;
+import com.jc.dao.DataImport;
+
+import ch.qos.logback.core.net.server.Client;
 
 /**
  * The {@link Client} class is a Spring Boot, GemFire cache client application
@@ -54,16 +57,39 @@ import org.gj.demo.domain.Customer;
  * @since 2.0.0
  */
 @SpringBootApplication
-@ClientCacheApplication(name = "GemFireContinuousQueryClient", subscriptionEnabled = true)
+@ClientCacheApplication(name = "GemFireContinuousQueryPeer",subscriptionEnabled=true)
 @SuppressWarnings("unused")
 public class Application {
+	@Autowired
+    DataImport dataImport;
+//	@Bean
+//	public ClientCacheFactoryBean cientCache() {
+//		ClientCacheFactoryBean clientCache = new ClientCacheFactoryBean();
+//		return clientCache;
+//	}
+//
+//	@Bean
+//	ClientCacheConfigurer clientCachePoolPortConfigurer(
+//			@Value("${gemfire.cache.server.host:localhost}") String cacheServerHost,
+//			@Value("${gemfire.cache.server.port:40404}") int cacheServerPort) {
+//
+//		return (beanName, clientCacheFactoryBean) -> clientCacheFactoryBean
+//				.setServers(Collections.singletonList(new ConnectionEndpoint(cacheServerHost, cacheServerPort)));
+//	}
+
 	@Bean(name = "Customers")
 	ClientRegionFactoryBean<Long, Customer> customersRegion(GemFireCache gemfireCache) {
 		ClientRegionFactoryBean<Long, Customer> customers = new ClientRegionFactoryBean<>();
 		customers.setCache(gemfireCache);
 		customers.setClose(true);
-		customers.setShortcut(ClientRegionShortcut.PROXY);
+		customers.setShortcut(ClientRegionShortcut.LOCAL_PERSISTENT);
+		//customers.setPoolName("cc");
+		// customers.c
 		return customers;
+	}
+
+	public void cientPool() {
+
 	}
 
 	@Bean
@@ -82,7 +108,8 @@ public class Application {
 
 	private ContinuousQueryListener newQueryListener(Region<Long, Customer> customers, String qualifier) {
 		return event -> {
-			System.err.printf("new order!");
+			System.err.printf("new order! "+event.getKey()+" "+event.getNewValue());
+			dataImport.save((Customer) event.getNewValue());
 		};
 	}
 

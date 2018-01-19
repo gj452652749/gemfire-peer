@@ -28,4 +28,8 @@ public class DataImport {
     public Customer findCustomerById( Long customerId) {
         return customers.get(customerId);
     }
+    public Customer save(Customer customer) {
+        this.customers.put(customer.getId(), customer);
+        return customer;
+    }
 }
